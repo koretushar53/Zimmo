@@ -7,14 +7,13 @@ import nltk
 
 nltk.download('stopwords')
 nltk.download('punkt')
+nltk.download('punkt_tab')   # ← this was missing
 
 ps = PorterStemmer()
-
 app = Flask(__name__)
 
 model = pickle.load(open('model1.pkl', 'rb'))
 vectorizer = pickle.load(open('vectorizer2.pkl', 'rb'))
-
 
 def transform_text(text):
 
@@ -74,4 +73,4 @@ def predict():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
