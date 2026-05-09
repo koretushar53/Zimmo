@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zimmo — Email Classifier</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Loading spinner shown on button while predicting */
+        .btn-predict.loading .btn-text { display: none; }
+        .btn-predict.loading .btn-icon { display: none; }
+        .btn-predict .btn-spinner { display: none; }
+        .btn-predict.loading .btn-spinner { display: inline-block; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(0,0,0,0.3);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        /* Pulse highlight on result when page loads with a prediction */
+        @keyframes highlightPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(236,219,37,0.5); }
+            70%  { box-shadow: 0 0 0 16px rgba(236,219,37,0); }
+            100% { box-shadow: 0 0 0 0 rgba(236,219,37,0); }
+        }
+        .result-card.just-loaded {
+            animation: fadeUp 0.5s ease both, popIn 0.4s ease both, highlightPulse 1s 0.5s ease both;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+
+        <!-- Background decoration -->
+        <div class="bg-orb bg-orb--1"></div>
+        <div class="bg-orb bg-orb--2"></div>
+
+        <div class="container">
+
+            <!-- NAV -->
+            <nav>
+                <div class="nav-inner">
+                    <div class="nav-brand">
+                        <div class="logo-ring">
+                            <img src="{{ url_for('static', filename='logo.png') }}" alt="Zimmo Logo" class="logo">
+                        </div>
+                        <span class="brand-name">Zimmo</span>
+                    </div>
+                    <div class="nav-badge">Email Classifier</div>
+                </div>
+            </nav>
+
+            <!-- HERO -->
+            <header class="hero">
+                <p class="hero-eyebrow">AI-powered detection</p>
+                <h1 class="hero-title">Is it <span class="accent">SPAM</span><br>or not?</h1>
+                <p class="hero-subtitle">Paste your email content below. Zimmo's classifier will analyse it instantly and give you a clear verdict.</p>
+            </header>
+
+            <hr class="divider-line">
+
+            <!-- FORM -->
+            <section class="card">
+                <h2 class="card-title">Analyse an Email</h2>
+                <form action="/predict" method="post">
+                    <div class="field-wrap">
+                        <label for="message" class="field-label">Email content</label>
+                        <textarea
+                            id="message"
+                            name="message"
+                            class="field-textarea"
+                            placeholder="Paste the full email body here…"
+                            rows="7"
+                            required
+                        ></textarea>
+                    </div>
+                    <button type="submit" class="btn-predict" id="predictBtn">
+                        <span class="btn-text">Run Classifier</span>
+                        <svg class="btn-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="btn-spinner"></span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- RESULT (Jinja block — logic untouched) -->
+            {% if prediction is not none %}
+            <hr class="divider-line">
+            <section id="result" class="result-card just-loaded {% if 'spam' in prediction|lower %}result-card--spam{% else %}result-card--safe{% endif %}">
+                <div class="result-icon">
+                    {% if 'spam' in prediction|lower %}
+                    <!-- Shield X -->
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6l-8-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                        <path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    {% else %}
+                    <!-- Shield Check -->
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6l-8-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                        <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {% endif %}
+                </div>
+                <div class="result-body">
+                    <p class="result-label">Verdict</p>
+                    <h2 class="result-verdict">{{ prediction }}</h2>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- FOOTER -->
+            <footer class="footer">
+                <p>Zimmo &copy; 2025 &nbsp;·&nbsp; Built with Flask &nbsp;·&nbsp; Powered by ML</p>
+            </footer>
+
+        </div>
+    </div>
+    <script>
+        // 1. Auto-scroll to result when page loads with a prediction
+        (function () {
+            var result = document.getElementById('result');
+            if (result) {
+                // Small delay so the animation plays while scrolling
+                setTimeout(function () {
+                    result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 150);
+            }
+        })();
+
+        // 2. Show loading spinner while form is submitting
+        var form = document.querySelector('form');
+        var btn  = document.getElementById('predictBtn');
+        if (form && btn) {
+            form.addEventListener('submit', function () {
+                btn.classList.add('loading');
+                btn.disabled = true;
+            });
+        }
+    </script>
+</body>
+</html>
